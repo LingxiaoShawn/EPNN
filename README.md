@@ -49,6 +49,10 @@ pip install setuptools==59.5.0
 # Run
 python main.py --cfg configs/GRIT/zinc-GRIT.yaml  wandb.use False accelerator "cuda:0" optim.max_epoch 2000 seed 41 dataset.dir 'xx/xx/data'
 
+python main.py --cfg configs/GRIT/zinc-GRIT-RRWP.yaml  wandb.use False accelerator "cuda:0" optim.max_epoch 2000 seed 41 dataset.dir '.datasets'
+
+python main.py --cfg configs/GRIT/zinc-GRIT-RRWP-EigenBasis.yaml  wandb.use False accelerator "cuda:3" optim.max_epoch 2000 seed 41 dataset.dir 'datasets' name_tag fExpBP_gMLP
+
 # replace 'cuda:0' with the device to use
 # replace 'xx/xx/data' with your data-dir (by default './datasets")
 # replace 'configs/GRIT/zinc-GRIT.yaml' with any experiments to run

@@ -10,7 +10,7 @@ from torch_geometric.utils.num_nodes import maybe_num_nodes
 from torch_scatter import scatter_add
 from functools import partial
 from .rrwp import add_full_rrwp
-
+from .eigenbasis import GroupedEVDTransform
 
 def compute_posenc_stats(data, pe_types, is_undirected, cfg):
     """Precompute positional encodings for the given graph.
@@ -34,7 +34,7 @@ def compute_posenc_stats(data, pe_types, is_undirected, cfg):
     # Verify PE types.
     for t in pe_types:
         if t not in ['LapPE', 'EquivStableLapPE', 'SignNet',
-                     'RWSE', 'HKdiagSE', 'HKfullPE', 'ElstaticSE','RRWP']:
+                     'RWSE', 'HKdiagSE', 'HKfullPE', 'ElstaticSE','RRWP', 'EigenBasis']:
             raise ValueError(f"Unexpected PE stats selection {t} in {pe_types}")
 
     # Basic preprocessing of the input graph.
@@ -145,6 +145,12 @@ def compute_posenc_stats(data, pe_types, is_undirected, cfg):
                             add_identity=True,
                             spd=param.spd, # by default False
                             )
+        data = transform(data)
+
+    # add another type: EigenBasis
+    if 'EigenBasis' in pe_types:
+        param = cfg.posenc_EigenBasis
+        transform = GroupedEVDTransform()
         data = transform(data)
 
     return data

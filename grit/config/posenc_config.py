@@ -15,11 +15,12 @@ def set_cfg_posenc(cfg):
     cfg.posenc_ElstaticSE = CN()
     cfg.posenc_EquivStableLapPE = CN()
     cfg.posenc_RRWP = CN()
+    cfg.posenc_EigenBasis = CN()
 
     # Common arguments to all PE types.
     for name in ['posenc_LapPE', 'posenc_SignNet',
                  'posenc_RWSE', 'posenc_HKdiagSE', 'posenc_ElstaticSE',
-                 'posenc_RRWP',
+                 'posenc_RRWP', 'posenc_EigenBasis',
                  ]:
         pecfg = getattr(cfg, name)
         # Use extended positional encodings

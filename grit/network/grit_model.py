@@ -74,6 +74,10 @@ class GritTransformer(torch.nn.Module):
                  add_node_attr_as_self_loop=False,
                  fill_value=0.
                  )
+            
+        if cfg.posenc_EigenBasis.enable: 
+            self.eigenbasis_encoder = register.edge_encoder_dict["eigenbasis_encoder"]\
+                (cfg.gnn.dim_edge,  pad_to_full_graph=cfg.gt.attn.full_attn)
 
 
         if cfg.gnn.layers_pre_mp > 0:
