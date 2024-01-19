@@ -18,18 +18,18 @@ class EigenBasisEncoder(torch.nn.Module):
     furthermore, we can allow dss based encoding in f and g, such that a summation is used to augment the transformation. 
     """
 
-    def __init__(self, dim_out,  batchnorm=False, layernorm=False, pad_to_full_graph=True) -> None:
+    def __init__(self, dim_out, batchnorm=False, layernorm=False, pad_to_full_graph=True) -> None:
         super().__init__()
         self.dim_out = dim_out
         self.batchnorm = batchnorm
         self.layernorm = layernorm
         self.pad_to_full_graph = pad_to_full_graph
 
-        self.f1 = MonotonicNN(dim_out//2, hidden_features=2048, nonlinear=True, exp=True,  bandpass=True,  monotonic=True, relu=False)
-        self.f2 = MonotonicNN(dim_out//2, hidden_features=2048, nonlinear=True, exp=True,  bandpass=False, monotonic=True, relu=False)
-        self.g =  MonotonicNN(dim_out,    hidden_features=64,   nonlinear=True, exp=False, bandpass=False, monotonic=False, relu=True)
+        self.concat = False
+        self.f = MonotonicNN(dim_out, hidden_features=512, exp=True,  monotonic=False)
+        self.g = MonotonicNN(dim_out, hidden_features=256, exp=False, monotonic=False)
 
-        self.linear = nn.Linear(2*dim_out, dim_out)
+        self.linear = nn.Linear(dim_out * (1+int(self.concat)), dim_out)
         if self.batchnorm:
             self.bn = nn.BatchNorm1d(dim_out)
         if self.layernorm:
@@ -50,11 +50,13 @@ class EigenBasisEncoder(torch.nn.Module):
         ) = to_dense_grouped_EVD(batch.grouped_eigval, batch.grouped_eigvec, batch.batch, batch.group_batch)
 
         # get f1 and f2, and concatenate them
-        f1 = self.f1(batched_eigval.unsqueeze(-1)) # b x m_max x dim_out//2
-        f2 = self.f2(batched_eigval.unsqueeze(-1)) # b x m_max x dim_out//2
-        f = torch.cat([f1, f2], dim=-1) # b x m_max x dim_out
-        f[~mask_m] = 0.0 # b x m_max x dim_out
+        f = self.f(batched_eigval.unsqueeze(-1)) # b x m_max x dim_out
+        f = f * mask_m.unsqueeze(-1) # b x m_max x dim_out
 
+        # f2 = self.f2(batched_eigval.unsqueeze(-1)) # b x m_max x dim_out//2
+        # f = torch.cat([f1, f2], dim=-1) # b x m_max x dim_out
+        # f[~mask_m] = 0.0 # b x m_max x dim_out
+        
         # get g
         g = self.g(batched_eigvec.unsqueeze(-1)) # b x m_max x n_max x n_max x dim_out
         g[~mask_all] = 0.0 # b x m_max x n_max x n_max x dim_out
@@ -69,16 +71,51 @@ class EigenBasisEncoder(torch.nn.Module):
 
         if self.batchnorm:
             out = self.bn(out)
-
         if self.layernorm:
             out = self.ln(out)
 
         # return out
-        out = torch.cat([batch.edge_attr, out], dim=-1) # num_edges_in_batch x (dim_out + dim_previous)
-        batch.edge_attr = self.linear(out) # num_edges_in_batch x dim_out
-    
+        if self.concat:
+            batch.edge_attr = self.linear(torch.cat([batch.edge_attr, out], dim=-1)) # num_edges_in_batch x dim_out
+        else:
+            batch.edge_attr = batch.edge_attr + self.linear(out)
         return batch
 
+    
+import torch.nn.functional as F
+class MonotonicNN(nn.Module):
+    def __init__(self, out_features, hidden_features=2048, nonlinear=True, exp=False, bandpass=False, monotonic=True, relu=False):
+        super().__init__()
+        self.hidden_features = hidden_features
+        self.out_features = out_features
+        self.nonlinear = nonlinear
+        self.bandpass = bandpass
+        self.exp = exp
+        self.relu = relu
+
+        self.l1 = DenseMonotone(1, out_features, bias=True, monotonic=monotonic)
+        self.l1.bias.data.fill_(0)
+        if self.nonlinear:
+            self.l2 = DenseMonotone(1, hidden_features, bias=True, monotonic=monotonic)
+            self.l3 = DenseMonotone(hidden_features, out_features, bias=False, monotonic=monotonic)
+            if bandpass:
+                self.bandpass = GuassianBandPass(hidden_features)
+
+    def forward(self, x):
+        # x: b x n x ... x 1, elements in range [-1,1]
+        # outputs: b x n x ... x out_features
+        h = self.l1(x)
+        if self.nonlinear:
+            _h = self.l2(x)
+            _h = F.silu(_h)
+            _h = self.l3(_h) #/ self.hidden_features
+            h = h + _h
+        if self.exp:
+            h = torch.exp(h)
+        else:
+            h = F.silu(h)
+        return h # original_shape x out_features
+    
 class DenseMonotone(nn.Module):
     """Strictly increasing Dense layer in PyTorch."""
 
@@ -108,45 +145,6 @@ class DenseMonotone(nn.Module):
         if self.use_bias:
             y = y + self.bias
         return y
-    
-class MonotonicNN(nn.Module):
-    def __init__(self, out_features, hidden_features=2048, nonlinear=True, exp=False, bandpass=False, monotonic=True, relu=False):
-        super().__init__()
-        self.hidden_features = hidden_features
-        self.out_features = out_features
-        self.nonlinear = nonlinear
-        self.bandpass = bandpass
-        self.exp = exp
-        self.relu = relu
-
-        self.l1 = DenseMonotone(1, out_features, bias=True, monotonic=monotonic)
-        self.l1.bias.data.fill_(0)
-        if self.nonlinear:
-            self.l2 = DenseMonotone(1, hidden_features, bias=True, monotonic=monotonic)
-            self.l3 = DenseMonotone(hidden_features, out_features, bias=False, monotonic=monotonic)
-            if bandpass:
-                self.bandpass = GuassianBandPass(hidden_features)
-
-    def forward(self, x):
-        # x: b x n x ... x 1, elements in range [-1,1]
-        # outputs: b x n x ... x out_features
-        h = self.l1(x)
-        if self.nonlinear:
-            _h = self.l2(x)
-
-            if self.relu:
-                _h = torch.relu(_h)
-            else:
-                _h = torch.sigmoid(_h) # 0 to 1
-                if self.bandpass:
-                    _h = self.bandpass(_h)
-                _h = 2.0 * (_h - 0.5) # -1 to 1
-
-            _h = self.l3(_h) / self.hidden_features
-            h = h + _h
-        if self.exp:
-            h = torch.exp(h)
-        return h # original_shape x out_features
     
 import math
 class GuassianBandPass(nn.Module):
