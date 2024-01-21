@@ -95,5 +95,11 @@ def set_cfg_posenc(cfg):
     cfg.posenc_RRWP.add_identity = True
     cfg.posenc_RRWP.spd = False
 
+    # ----------------- Note: EigenBasis --------------
+    cfg.posenc_EigenBasis.enable = False
+    cfg.posenc_EigenBasis.kgroups = 20 
+    cfg.posenc_EigenBasis.eigval_hidden = 256
+    cfg.posenc_EigenBasis.eigspace_hidden = 64
+
 
 

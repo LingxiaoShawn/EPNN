@@ -33,7 +33,9 @@ posenc_RRWP:
   add_inverse: False
 posenc_EigenBasis:
   enable: True
-  ksteps: 32 # this is used for the total number of transformed eigenbasis aggregation
+  kgroups: 30 
+  eigval_hidden: 512
+  eigspace_hidden: 256
 train:
   mode: custom
   batch_size: 32

@@ -150,7 +150,7 @@ def compute_posenc_stats(data, pe_types, is_undirected, cfg):
     # add another type: EigenBasis
     if 'EigenBasis' in pe_types:
         param = cfg.posenc_EigenBasis
-        transform = GroupedEVDTransform()
+        transform = GroupedEVDTransform(max_num_groups=param.kgroups)
         data = transform(data)
 
     return data

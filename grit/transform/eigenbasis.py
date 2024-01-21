@@ -5,7 +5,9 @@ from scipy.sparse import coo_matrix
 from scipy.sparse.linalg import eigsh
 
 class GroupedEVDTransform(object):
-    threshold = 1e-6
+    def __init__(self, max_num_groups=20, threshold=1e-6,):
+        self.threshold = threshold
+        self.max_num_groups = max_num_groups
     def __call__(self, data):
         D, V = EVD_normlized_adj(data, norm='sym')
         # Group eigen vals and vecs 
@@ -29,9 +31,9 @@ class GroupedEVDTransform(object):
         grouped_eigval = torch.tensor(grouped_eigval) # m x 1 
         grouped_eigvec = torch.stack(grouped_eigvec)  # m x n x n 
 
-        m = grouped_eigval.size(0)
-        data.grouped_eigval = grouped_eigval
-        data.grouped_eigvec = grouped_eigvec.reshape(-1) # reshape to 1-d to save
+        m = min(grouped_eigval.size(0), self.max_num_groups) # truncate the num of groups for scalability. 
+        data.grouped_eigval = grouped_eigval[:m]
+        data.grouped_eigvec = grouped_eigvec[:m].reshape(-1) # reshape to 1-d to save
         data.group_batch = torch.zeros(m, dtype=torch.long)
         return data
     

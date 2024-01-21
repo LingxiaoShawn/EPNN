@@ -18,7 +18,7 @@ class EigenBasisEncoder(torch.nn.Module):
     furthermore, we can allow dss based encoding in f and g, such that a summation is used to augment the transformation. 
     """
 
-    def __init__(self, dim_out, batchnorm=False, layernorm=False, pad_to_full_graph=True) -> None:
+    def __init__(self, dim_out, eigval_hidden=256, eigspace_hidden=64, batchnorm=False, layernorm=False, pad_to_full_graph=True) -> None:
         super().__init__()
         self.dim_out = dim_out
         self.batchnorm = batchnorm
@@ -26,8 +26,8 @@ class EigenBasisEncoder(torch.nn.Module):
         self.pad_to_full_graph = pad_to_full_graph
 
         self.concat = False
-        self.f = MonotonicNN(dim_out, hidden_features=512, exp=True,  monotonic=False)
-        self.g = MonotonicNN(dim_out, hidden_features=256, exp=False, monotonic=False)
+        self.f = MonotonicNN(dim_out, hidden_features=eigval_hidden,    exp=True,  monotonic=False)
+        self.g = MonotonicNN(dim_out, hidden_features=eigspace_hidden,  exp=False, monotonic=False)
 
         self.linear = nn.Linear(dim_out * (1+int(self.concat)), dim_out)
         if self.batchnorm:
@@ -58,7 +58,9 @@ class EigenBasisEncoder(torch.nn.Module):
         # f[~mask_m] = 0.0 # b x m_max x dim_out
         
         # get g
-        g = self.g(batched_eigvec.unsqueeze(-1)) # b x m_max x n_max x n_max x dim_out
+        g = self.g(batched_eigvec.unsqueeze(-1)) # b x m_max x n_max x n_max x dim_out 
+        #### TODO: problem here, g cost too much memory by storage n^3 things. Solution: truncation is necessary.
+
         g[~mask_all] = 0.0 # b x m_max x n_max x n_max x dim_out
 
         # get the final output
