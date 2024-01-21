@@ -5,7 +5,7 @@ accelerator: "cuda:0"
 mlflow:
   use: False
   project: Exp
-  name: cluster-GRIT-RRWP
+  name: cluster-GRIT-RRWPZ
 wandb:
   use: False
   project: CLUSTER
@@ -30,7 +30,10 @@ posenc_RRWP:
   add_inverse: False
 posenc_EigenBasis:
   enable: True
-  ksteps: 32 # this is used for the total number of transformed eigenbasis aggregation
+  kgroups: 30        # max number of distinct eigenvalues that are used 
+  eigval_hidden: 256
+  eigspace_hidden: 32
+name_tag: f256g32
 train:
   mode: custom
   batch_size: 16

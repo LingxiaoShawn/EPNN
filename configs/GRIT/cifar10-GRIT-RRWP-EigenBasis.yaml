@@ -34,6 +34,7 @@ posenc_EigenBasis:
   kgroups: 30        # max number of distinct eigenvalues that are used 
   eigval_hidden: 512
   eigspace_hidden: 64
+name_tag: f512g64
 train:
   mode: custom
   batch_size: 16
