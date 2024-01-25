@@ -7,19 +7,19 @@ accelerator: "cuda:0"
 mlflow:
   use: False
   project: Exp
-  name: zinc-GRIT-RRWP-EigenBasis
+  name: zinc-full-GRIT-RRWP
 wandb:
   use: False
   project: ZINC
 dataset:
   format: PyG-ZINC
-  name: subset
+  name: full
   task: graph
   task_type: regression
   transductive: False
   node_encoder: True
   node_encoder_name: TypeDictNode
-  node_encoder_num_types: 21 # actually 21 in Zinc-12k, 28 in Zinc-full
+  node_encoder_num_types: 28 # actually 21 in Zinc-12k, 28 in Zinc-full
   node_encoder_bn: False
   edge_encoder: True
   edge_encoder_name: TypeDictEdge
@@ -36,10 +36,10 @@ posenc_EigenBasis:
   kgroups: 50
   eigval_hidden: 128
   eigspace_hidden: 64
-name_tag: f128g64Add3Layer
+name_tag: f128g64
 train:
   mode: custom
-  batch_size: 32
+  batch_size: 256
   eval_period: 1
   enable_ckpt: True  # Checkpointing can now be disabled to save I/O when e.g. just benchmarking.
   ckpt_best: True  # WARNING: Checkpoint every epoch a better model is found may increase I/O significantly.
@@ -57,7 +57,6 @@ gt:
   dropout: 0.0
   layer_norm: False
   batch_norm: True
-#  bn_momentum: 0.01
   update_e: True
   attn_dropout: 0.2
   attn:
@@ -67,7 +66,7 @@ gt:
     edge_enhance: True
     O_e: True
     norm_e: True
-    fwl: False
+    signed_sqrt: True
 gnn: # decoder --> san_graph = MLP + pooling
   head: san_graph
   layers_pre_mp: 0

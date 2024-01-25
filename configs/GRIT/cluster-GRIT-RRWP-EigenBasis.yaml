@@ -31,9 +31,9 @@ posenc_RRWP:
 posenc_EigenBasis:
   enable: True
   kgroups: 30        # max number of distinct eigenvalues that are used 
-  eigval_hidden: 256
-  eigspace_hidden: 32
-name_tag: f256g32
+  eigval_hidden: 128
+  eigspace_hidden: 64
+name_tag: f128g64
 train:
   mode: custom
   batch_size: 16

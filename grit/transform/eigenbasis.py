@@ -13,9 +13,9 @@ class GroupedEVDTransform(object):
         # Group eigen vals and vecs 
         grouped_eigval = []
         grouped_eigvec = []
-        preval = 1 # assume eigenvalues start from 1
-        stack = []
-        for val, vec in zip(D, V.T):
+        preval = D[0] # assume eigenvalues start from 1
+        stack = [V.T[0]]
+        for val, vec in zip(D[1:], V.T[1:]):
             if abs(val - preval) < self.threshold:
                 stack.append(vec)
             else:

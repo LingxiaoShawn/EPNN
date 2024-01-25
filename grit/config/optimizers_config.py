@@ -18,7 +18,7 @@ def extended_optim_cfg(cfg):
     cfg.optim.schedule_patience = 10
 
     # ReduceLROnPlateau: Lower bound on the learning rate
-    cfg.optim.min_lr = 0.0
+    cfg.optim.min_lr = 1e-6
 
     # For schedulers with warm-up phase, set the warm-up number of epochs
     cfg.optim.num_warmup_epochs = 50

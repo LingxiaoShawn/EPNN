@@ -28,6 +28,12 @@ posenc_RRWP:
   add_identity: True
   add_node_attr: False
   add_inverse: True
+posenc_EigenBasis:
+  enable: True
+  kgroups: 50
+  eigval_hidden: 256
+  eigspace_hidden: 64
+name_tag: f256g64
 train:
   mode: custom
   batch_size: 256
@@ -35,7 +41,7 @@ train:
   ckpt_best: True
   ckpt_clean: True
 #  ckpt_period: 100
-model: 
+model:
   type: GritTransformer
   loss_fun: l1
   graph_pooling: mean

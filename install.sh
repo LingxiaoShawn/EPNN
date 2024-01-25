@@ -18,8 +18,13 @@ pip install tensorboardX
 
 
 
+python main.py --cfg configs/GRIT/peptides-func-GRIT-RRWP-EigenBasis.yaml accelerator "cuda:6"  dataset.dir 'datasets'
+python main.py --cfg configs/GRIT/peptides-func-GRIT-RRWP-EigenBasis.yaml accelerator "cuda:6"  dataset.dir 'datasets'
+python main.py --cfg configs/GRIT/peptides-func-GRIT-RRWP.yaml accelerator "cuda:7"  dataset.dir 'datasets'
+python main.py --cfg configs/GRIT/peptides-struct-GRIT-RRWP.yaml accelerator "cuda:4"  dataset.dir 'datasets'
+
 python main.py --cfg configs/GRIT/cifar10-GRIT-RRWP-EigenBasis.yaml accelerator "cuda:7"  dataset.dir 'datasets'
-python main.py --cfg configs/GRIT/cifar10-GRIT-RRWP.yaml accelerator "cuda:6"  dataset.dir 'datasets'
+python main.py --cfg configs/GRIT/cluster-GRIT-RRWP.yaml accelerator "cuda:6"  dataset.dir 'datasets'
 python main.py --cfg configs/GRIT/cluster-GRIT-RRWP-EigenBasis.yaml accelerator "cuda:5"  dataset.dir 'datasets'
 
 # python main.py --cfg configs/GRIT/zinc-GRIT-RRWP-EigenBasis.yaml accelerator "cuda:5" optim.max_epoch 2000 seed 41 dataset.dir 'datasets' name_tag fExp_gMLP_concat

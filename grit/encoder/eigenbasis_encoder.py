@@ -26,14 +26,14 @@ class EigenBasisEncoder(torch.nn.Module):
         self.pad_to_full_graph = pad_to_full_graph
 
         self.concat = False
-        self.f = MonotonicNN(dim_out, hidden_features=eigval_hidden,    exp=True,  monotonic=False)
-        self.g = MonotonicNN(dim_out, hidden_features=eigspace_hidden,  exp=False, monotonic=False)
+        self.f = MonotonicNN(eigspace_hidden, hidden_features=eigval_hidden,    exp=True,  monotonic=False)
+        self.g = MonotonicNN(eigspace_hidden, hidden_features=eigspace_hidden,  exp=False, monotonic=False)
 
-        self.linear = nn.Linear(dim_out * (1+int(self.concat)), dim_out)
+        self.linear = nn.Linear(eigspace_hidden + int(self.concat)*dim_out, dim_out)
         if self.batchnorm:
-            self.bn = nn.BatchNorm1d(dim_out)
+            self.bn = nn.BatchNorm1d(eigspace_hidden)
         if self.layernorm:
-            self.ln = nn.LayerNorm(dim_out)
+            self.ln = nn.LayerNorm(eigspace_hidden)
 
     def forward(self, batch):
         # assert batch contains necessary attributes
@@ -86,7 +86,7 @@ class EigenBasisEncoder(torch.nn.Module):
     
 import torch.nn.functional as F
 class MonotonicNN(nn.Module):
-    def __init__(self, out_features, hidden_features=2048, nonlinear=True, exp=False, bandpass=False, monotonic=True, relu=False):
+    def __init__(self, out_features, hidden_features=2048, nonlinear=True, exp=False, bandpass=False, monotonic=True, relu=False, num_layers=3):
         super().__init__()
         self.hidden_features = hidden_features
         self.out_features = out_features
@@ -98,8 +98,12 @@ class MonotonicNN(nn.Module):
         self.l1 = DenseMonotone(1, out_features, bias=True, monotonic=monotonic)
         self.l1.bias.data.fill_(0)
         if self.nonlinear:
-            self.l2 = DenseMonotone(1, hidden_features, bias=True, monotonic=monotonic)
-            self.l3 = DenseMonotone(hidden_features, out_features, bias=False, monotonic=monotonic)
+            self.layers = nn.ModuleList(DenseMonotone(1 if i==0 else hidden_features, 
+                                                      hidden_features if i < num_layers-1 else out_features, 
+                                                      bias=True, monotonic=monotonic) 
+                                                      for i in range(num_layers))
+            # self.l2 = DenseMonotone(1, hidden_features, bias=True, monotonic=monotonic)
+            # self.l3 = DenseMonotone(hidden_features, out_features, bias=False, monotonic=monotonic)
             if bandpass:
                 self.bandpass = GuassianBandPass(hidden_features)
 
@@ -108,14 +112,18 @@ class MonotonicNN(nn.Module):
         # outputs: b x n x ... x out_features
         h = self.l1(x)
         if self.nonlinear:
-            _h = self.l2(x)
-            _h = F.silu(_h)
-            _h = self.l3(_h) #/ self.hidden_features
-            h = h + _h
+            _h = x
+            for layer in self.layers:
+                _h = F.silu(_h)
+                _h = layer(_h)
+            # _h = self.l2(x)
+            # _h = F.silu(_h)
+            # _h = self.l3(_h) #/ self.hidden_features
+            # h = h + _h
         if self.exp:
-            h = torch.exp(h)
+            h = h + torch.exp(_h)
         else:
-            h = F.silu(h)
+            h = h + F.silu(_h)
         return h # original_shape x out_features
     
 class DenseMonotone(nn.Module):

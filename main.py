@@ -114,7 +114,7 @@ def run_loop_settings():
         run_ids = split_indices
     return run_ids, seeds, split_indices
 
-
+import pdb
 if __name__ == '__main__':
     # Load cmd line args
     args = parse_args()
@@ -154,6 +154,9 @@ if __name__ == '__main__':
         logging.info(f"    Starting now: {datetime.datetime.now()}")
         # Set machine learning pipeline
         loaders = create_loader()
+        print(len(loaders))
+        print(len(loaders[0]), len(loaders[1]), len(loaders[2]))
+        # pdb.set_trace()
         loggers = create_logger()
         model = create_model()
         if cfg.pretrained.dir:

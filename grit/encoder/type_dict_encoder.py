@@ -94,7 +94,6 @@ class TypeDictNodeEncoder(torch.nn.Module):
     def forward(self, batch):
         # Encode just the first dimension if more exist
         batch.x = self.encoder(batch.x[:, 0])
-
         return batch
 
 

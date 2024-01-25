@@ -613,7 +613,20 @@ def preformat_Peptides(dataset_dir, name):
     dataset.split_idxs = [s_dict[s] for s in ['train', 'val', 'test']]
     return dataset
 
-
+import os
+import pdb
+class ToLabel:
+    # This cannot be used as pretransform, there is a weird bug in PyG, 
+    # such that data.x becomes empty. 
+    def __call__(self, data):
+        for store in data.node_stores:
+            if hasattr(store, 'x'):
+                store.x = store.x.argmax(dim=-1, keepdim=True)
+            if hasattr(store, 'edge_attr'):
+                store.edge_attr = store.edge_attr.argmax(dim=-1)
+        return data
+import pdb
+import numpy as np 
 def preformat_TUDataset(dataset_dir, name):
     """Load and preformat datasets from PyG's TUDataset.
 
@@ -628,9 +641,38 @@ def preformat_TUDataset(dataset_dir, name):
         func = None
     elif name.startswith('IMDB-') or name == "COLLAB":
         func = T.Constant()
+    elif name == 'alchemy_full':
+        func = None
     else:
         ValueError(f"Loading dataset '{name}' from TUDataset is not supported.")
-    dataset = TUDataset(dataset_dir, name, pre_transform=func)
+
+    dataset = TUDataset(dataset_dir, name, pre_transform=func)    
+
+    if name == 'alchemy_full':
+        dataset.transform = ToLabel()
+        ### alchemy_full is a huge dataset, subset it to a smaller size.
+        # load train val test index 
+        with open(os.path.join(dataset_dir, 'train_al_10.index'), 'r') as file:
+            line = file.readline()
+            train_indice = [int(num) for num in line.split(',')]
+        with open(os.path.join(dataset_dir, 'val_al_10.index'), 'r') as file:
+            line = file.readline()
+            val_indice = [int(num) for num in line.split(',')]
+            val_indice.sort()
+        with open(os.path.join(dataset_dir, 'test_al_10.index'), 'r') as file:
+            line = file.readline()
+            test_indice = [int(num) for num in line.split(',')]
+            test_indice.sort()
+
+        dataset = dataset[train_indice + val_indice + test_indice]
+        # normalize the label y
+        mean = dataset.data.y.mean(dim=0, keepdim=True)
+        std = dataset.data.y.std(dim=0, keepdim=True)
+        dataset.data.y = (dataset.data.y - mean) / std
+        # contains 12k sampled graphs, based on SigNet paper
+        dataset = join_dataset_splits(
+            [dataset[:10000], dataset[10000:11000], dataset[11000:]]
+        )
     return dataset
 
 

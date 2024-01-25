@@ -1,0 +1,86 @@
+out_dir: results
+metric_best: mae
+metric_agg: argmin
+tensorboard_each_run: True  # Log to Tensorboard each run
+accelerator: "cuda:0"
+
+dataset:
+  dir: datasets
+  format: OGB
+  name: ogbg-molesol
+  task: graph
+  task_type: regression
+  transductive: False
+  node_encoder: True
+  node_encoder_name: Atom
+  node_encoder_bn: False
+  edge_encoder: True
+  edge_encoder_name: Bond
+  edge_encoder_bn: False
+
+
+posenc_RRWP:
+  enable: True
+  ksteps: 20
+  add_identity: True
+  add_node_attr: False
+  add_inverse: False
+posenc_EigenBasis:
+  enable: True
+  kgroups: 50
+  eigval_hidden: 128
+  eigspace_hidden: 64
+name_tag: f128g64Add3Layer
+
+train:
+  mode: custom
+  batch_size: 32
+  eval_period: 1
+  ckpt_best: True
+  ckpt_clean: True
+
+model:
+  type: GritTransformer
+  loss_fun: l1
+  edge_decoding: dot
+  graph_pooling: mean
+
+gt:
+  layer_type: GritTransformer
+  layers: 5
+  n_heads: 8
+  dim_hidden: 128  # `gt.dim_hidden` must match `gnn.dim_inner`
+  dropout: 0.0
+  layer_norm: False
+  batch_norm: True
+  update_e: True
+  attn_dropout: 0.2
+  attn:
+    clamp: 5.
+    act: 'relu'
+    full_attn: True
+    edge_enhance: True
+    O_e: True
+    norm_e: True
+    fwl: False
+
+gnn: # decoder --> san_graph = MLP + pooling
+  head: san_graph
+  layers_pre_mp: 0
+  layers_post_mp: 3  # Not used when `gnn.head: san_graph`
+  dim_inner: 128  # `gt.dim_hidden` must match `gnn.dim_inner`
+  batchnorm: True
+  act: relu
+  dropout: 0.0
+  agg: mean
+  normalize_adj: False
+
+optim:
+  clip_grad_norm: True
+  optimizer: adamW
+  weight_decay: 0.0
+  base_lr: 0.001
+  max_epoch: 100
+  scheduler: reduce_on_plateau
+  num_warmup_epochs: 3
+

@@ -308,6 +308,8 @@ def eval_spearmanr(y_true, y_pred):
     """
     res_list = []
 
+    y_true = y_true.squeeze()
+
     if y_true.ndim == 1:
         res_list.append(stats.spearmanr(y_true, y_pred)[0])
     else:
